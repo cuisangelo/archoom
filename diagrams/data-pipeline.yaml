@@ -1,0 +1,35 @@
+title: Data pipeline
+description: YAML-sourced diagram — ingestion to insights.
+source: |
+  title Data pipeline
+  direction right
+
+  sources [icon: globe, label: "Event Sources", color: purple]
+
+  Ingestion [color: blue] {
+    collector [icon: webhook, label: "Collector"]
+    stream [icon: kafka, label: "Stream", color: orange]
+  }
+
+  Processing [color: teal] {
+    etl [icon: pipeline, label: "ETL Jobs"]
+    ml [icon: ai, label: "ML Models", color: purple]
+  }
+
+  Storage [color: green] {
+    lake [icon: storage, label: "Data Lake"]
+    warehouse [icon: database, label: "Warehouse"]
+  }
+
+  dashboard [icon: dashboard, label: "Dashboards", color: blue]
+
+  sources > collector
+  collector > stream
+  stream > etl: consume
+  etl > lake
+  etl > warehouse
+  warehouse > ml: train
+  ml --> warehouse: predictions
+  warehouse > dashboard
+
+  note stream: "Partitioned by tenant. 7-day retention."
