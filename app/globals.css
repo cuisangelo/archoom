@@ -1,0 +1,51 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-surface: #f6f7f8;
+  --color-card: #eef0f3;
+  --color-ink: #1f2430;
+  --color-muted: #6b7280;
+  --color-hairline: #e3e5ea;
+  --color-primary: #2b2f3a;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+/* Liquid-glass React Flow chrome. */
+.react-flow__controls {
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 8px 24px rgba(31, 36, 48, 0.08);
+}
+
+.react-flow__controls-button {
+  background: transparent;
+  border-bottom: 1px solid rgba(227, 229, 234, 0.6);
+  color: var(--color-muted);
+}
+
+.react-flow__controls-button:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.react-flow__attribution {
+  background: transparent;
+  font-family: var(--font-mono);
+  color: #b6bcc6;
+}
+
+/* Edges are display-only — never intercept clicks meant for nodes. */
+.react-flow__edge {
+  pointer-events: none;
+}

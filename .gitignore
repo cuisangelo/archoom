@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.next/
+.icons-cache/
+*.local
+.DS_Store
