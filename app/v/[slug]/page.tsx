@@ -1,24 +1,21 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { readDiagram } from '@/lib/diagrams';
-import { verifyShareToken } from '@/lib/share';
 import Workbench from '@/components/Workbench';
 
 export const dynamic = 'force-dynamic';
 
-type Params = Promise<{ slug: string; token: string }>;
+type Params = Promise<{ slug: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const { slug, token } = await params;
-  if (!verifyShareToken(slug, token)) return {};
+  const { slug } = await params;
   const diagram = readDiagram(slug);
-  const title = diagram?.title ?? slug;
-  return { title: `${title} — archoom`, description: diagram?.description };
+  if (!diagram) return {};
+  return { title: `${diagram.title ?? slug} — archoom`, description: diagram.description };
 }
 
 export default async function ViewPage({ params }: { params: Params }) {
-  const { slug, token } = await params;
-  if (!verifyShareToken(slug, token)) notFound();
+  const { slug } = await params;
   const diagram = readDiagram(slug);
   if (!diagram) notFound();
 

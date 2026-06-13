@@ -1,24 +1,9 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
-
 /**
- * View-only share links carry a token derived from the slug, decoupling the public
- * `/v/<slug>/<token>` viewer from the editable `/d/<slug>` route. Set ARCHOOM_SHARE_SECRET
- * in production to make tokens unguessable; the default keeps links stable for local use.
+ * View-only share links live at `/v/<slug>` — a chromeless, read-only viewer that's safe to
+ * embed anywhere. Editing happens through `/d/<slug>` and only where the filesystem is writable.
  */
-const SECRET = process.env.ARCHOOM_SHARE_SECRET ?? 'archoom';
-
-export function shareToken(slug: string): string {
-  return createHmac('sha256', SECRET).update(slug).digest('base64url').slice(0, 12);
-}
-
-export function verifyShareToken(slug: string, token: string): boolean {
-  const expected = shareToken(slug);
-  if (token.length !== expected.length) return false;
-  return timingSafeEqual(Buffer.from(token), Buffer.from(expected));
-}
-
 export function sharePath(slug: string): string {
-  return `/v/${slug}/${shareToken(slug)}`;
+  return `/v/${slug}`;
 }
 
 /**
