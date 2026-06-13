@@ -40,7 +40,7 @@ export default function Home() {
             return (
               <li key={d.slug}>
                 <Link
-                  href={`/d/${d.slug}`}
+                  href={`/e/${d.slug}`}
                   className="block rounded-3xl border border-white/65 bg-white/55 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_8px_24px_rgba(31,36,48,0.06)] backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-white/80"
                 >
                   <h2 className="text-[15px] font-semibold">{d.title ?? doc.title ?? d.slug}</h2>
