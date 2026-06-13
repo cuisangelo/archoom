@@ -4,16 +4,17 @@
 
 ![archoom workbench](docs/screenshot.png)
 
-archoom renders architecture diagrams from a small text DSL onto an interactive canvas. Each diagram is a plain `.md` or `.yaml` file in your repo: edit it in your editor or in the built-in code panel, click any component to attach a note, and everything is written straight back to the file. No database, no accounts — diagrams live with your code and review like code. Deploy it as a read-only gallery and share any diagram as an interactive, embeddable link.
+archoom renders architecture diagrams from a small text DSL onto an interactive canvas. Each diagram is a plain `.md` or `.yaml` file in your repo: edit it in your editor or in the built-in code panel, click any component to attach a note, and — when you run it locally — everything is written straight back to the file. No database, no accounts: diagrams live with your code and review like code. Deploy it as a read-only gallery and share any diagram as an interactive, embeddable link.
 
 ## Features
 
-- **Files are the source of truth.** Diagrams are `.md` / `.yaml` files in `diagrams/`. Edits and notes are debounce-saved back into the file itself.
+- **Files are the source of truth.** Diagrams are `.md` / `.yaml` files in `diagrams/`. Edits and notes are debounce-saved back into the file itself (locally).
 - **Diagram-as-code DSL.** Nodes, nested groups, labeled connections, colors and icons in a few lines of text.
+- **Two modes.** An editor (`/e/<slug>`) with a live code panel, and a read-only, embeddable viewer (`/v/<slug>`).
 - **Automatic layout.** ELK's layered algorithm handles nested containers; pan, zoom and drag freely on a React Flow canvas.
 - **Click-to-annotate.** Select a component and write a note in the panel that opens next to it. Notes are stored as `note` statements in the source, so they travel with the file and show up in diffs.
 - **Official cloud icons.** 1,150+ vendored AWS / Azure / GCP architecture icons, plus a general-purpose line-icon set with fuzzy name matching.
-- **Shareable view-only links.** Every diagram has a chromeless, interactive `/v/<slug>` viewer you can embed in an `<iframe>`. Editing is gated to local — the deployed site is read-only.
+- **Shareable & embeddable.** Drop any diagram into another site with a single `<iframe>` — no database, no secrets, no accounts.
 
 ## Getting started
 
@@ -22,7 +23,46 @@ pnpm install
 pnpm dev
 ```
 
-Open http://localhost:3000. Every diagram file found in `diagrams/` appears on the index — add a new one by dropping a file there.
+Open <http://localhost:3000>. The index lists every diagram found in `diagrams/`; click one to open it in edit mode (`/e/<slug>`). Add a new diagram by dropping a `.md` or `.yaml` file into `diagrams/`.
+
+## Two modes: edit & view
+
+Every diagram is reachable two ways:
+
+| Route | Mode | What you get |
+| --- | --- | --- |
+| `/e/<slug>` | **Edit** | Full workbench — code panel, live re-render, click-to-annotate. Saves back to the file when the filesystem is writable (i.e. running locally). |
+| `/v/<slug>` | **View** | Chromeless, interactive, read-only viewer — pan, zoom, hover-to-focus, read notes. Built to embed. |
+
+On a read-only host (like Vercel) the editor still works as a **live playground**: you can tweak the DSL and watch the diagram update, it just doesn't persist. To change a deployed diagram, edit the file locally and push — the source files are the single source of truth.
+
+## Sharing & embedding
+
+Open any diagram and hit **Share** to copy its `/v/<slug>` link or a ready-made `<iframe>` snippet. The `/v/*` routes send `Content-Security-Policy: frame-ancestors *`, so the viewer drops into an `<iframe>` on any site:
+
+```html
+<iframe src="https://your-app.vercel.app/v/my-system" width="100%" height="480" style="border:0;border-radius:16px" loading="lazy"></iframe>
+```
+
+## Deploying
+
+archoom is a standard Next.js app — deploy it anywhere that runs Next, Vercel being the obvious choice:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/cuisangelo/archoom)
+
+```bash
+vercel --prod
+```
+
+Because the deployed filesystem is read-only, the live site serves diagrams in view / playground mode for everyone — nobody can overwrite your diagrams. You author locally and push; Vercel redeploys from the repo.
+
+### Configuration
+
+There is one optional environment variable — no database, no secrets, no accounts:
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `ARCHOOM_EDIT` | unset | `1` forces saving **on** (writable self-host); `0` forces it **off** (preview the read-only deploy locally). Unset = on when local, off on Vercel. |
 
 ## Diagram files
 
@@ -128,18 +168,14 @@ Created and updated automatically when you annotate from the UI; safe to write b
 
 Cloud provider icons remain under their respective owners' terms — see [public/icons/README.md](public/icons/README.md).
 
-## Sharing & deploying
+## Contributing
 
-archoom is meant to be deployed (e.g. to Vercel) as a public, **read-only** gallery and embedded anywhere.
-
-- **View-only links.** Every diagram has a chromeless, interactive viewer at `/v/<slug>`. Open a diagram and hit **Share** to copy the link or a ready-made `<iframe>` embed snippet.
-- **Editing is local-only.** The code editor and note-saving write to the diagram files, so they're enabled only where the filesystem is writable — i.e. running locally. On a read-only host like Vercel the diagrams render without an editor, so nobody can edit the deployed site. Override with `ARCHOOM_EDIT=1` (force-enable) or `ARCHOOM_EDIT=0` (force read-only).
-- **Embedding.** The `/v/*` routes send `Content-Security-Policy: frame-ancestors *`, so they drop into an `<iframe>` on any site.
-
-```html
-<iframe src="https://your-app.vercel.app/v/my-system" width="100%" height="480" style="border:0;border-radius:16px" loading="lazy"></iframe>
-```
+Issues and pull requests are welcome. The diagrams under `diagrams/` are examples — drop in your own `.md` / `.yaml`, run `pnpm dev`, and the source files are the only state you need to reason about. Keep changes small and the DSL boring.
 
 ## Stack
 
 [Next.js](https://nextjs.org) · [React Flow](https://reactflow.dev) · [elkjs](https://github.com/kieler/elkjs) · [CodeMirror 6](https://codemirror.net) · [Tailwind CSS 4](https://tailwindcss.com) · [Lucide](https://lucide.dev)
+
+## License
+
+[MIT](LICENSE)
