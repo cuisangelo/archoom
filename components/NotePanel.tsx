@@ -8,11 +8,12 @@ interface Props {
   node: NodeDef;
   note: string;
   position: { left: number; top: number };
+  editable: boolean;
   onChange: (text: string) => void;
   onClose: () => void;
 }
 
-export default function NotePanel({ node, note, position, onChange, onClose }: Props) {
+export default function NotePanel({ node, note, position, editable, onChange, onClose }: Props) {
   const tint = resolveColor(node.color);
   const isCloud = cloudIconSrc(node.icon) !== null;
 
@@ -43,18 +44,26 @@ export default function NotePanel({ node, note, position, onChange, onClose }: P
           <X size={14} />
         </button>
       </div>
-      <textarea
-        value={note}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Write a note about this component…"
-        autoFocus
-        className="min-h-44 resize-y rounded-xl bg-ink/5 p-3 text-[13px] leading-relaxed text-ink outline-none placeholder:text-muted/70"
-      />
-      <p className="font-mono text-[10.5px] leading-snug text-muted">
-        {note
-          ? `saved in the source as  note ${node.id}: "…"`
-          : 'Notes are saved into the source file — they travel with the diagram.'}
-      </p>
+      {editable ? (
+        <>
+          <textarea
+            value={note}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Write a note about this component…"
+            autoFocus
+            className="min-h-44 resize-y rounded-xl bg-ink/5 p-3 text-[13px] leading-relaxed text-ink outline-none placeholder:text-muted/70"
+          />
+          <p className="font-mono text-[10.5px] leading-snug text-muted">
+            {note
+              ? `saved in the source as  note ${node.id}: "…"`
+              : 'Notes are saved into the source file — they travel with the diagram.'}
+          </p>
+        </>
+      ) : (
+        <p className="whitespace-pre-wrap rounded-xl bg-ink/5 p-3 text-[13px] leading-relaxed text-ink">
+          {note}
+        </p>
+      )}
     </aside>
   );
 }

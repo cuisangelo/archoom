@@ -21,6 +21,7 @@ import Editor from './Editor';
 import ArchNode from './ArchNode';
 import GroupNode from './GroupNode';
 import NotePanel from './NotePanel';
+import ShareMenu from './ShareMenu';
 import { parse } from '@/lib/dsl/parser';
 import { upsertNote } from '@/lib/dsl/notes';
 import { layoutDoc } from '@/lib/layout/elk';
@@ -37,11 +38,17 @@ interface Props {
   slug: string;
   file: string;
   initialSource: string;
+  /** Show the code editor, note editing and autosave. Off on read-only/embedded views. */
+  editable: boolean;
+  /** Chromeless layout for embedding the viewer in an iframe. */
+  embed?: boolean;
+  /** View-only link surfaced in the header's Share menu. */
+  sharePath?: string;
 }
 
-function Canvas({ slug, file, initialSource }: Props) {
+function Canvas({ slug, file, initialSource, editable, embed = false, sharePath }: Props) {
   const [source, setSource] = useState(initialSource);
-  const [showCode, setShowCode] = useState(true);
+  const [showCode, setShowCode] = useState(editable);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -57,7 +64,7 @@ function Canvas({ slug, file, initialSource }: Props) {
   // Persist edits back to the diagram file, debounced.
   const lastSaved = useRef(initialSource);
   useEffect(() => {
-    if (source === lastSaved.current) return;
+    if (!editable || source === lastSaved.current) return;
     setSaveState('saving');
     const timer = window.setTimeout(async () => {
       try {
@@ -74,7 +81,7 @@ function Canvas({ slug, file, initialSource }: Props) {
       }
     }, 600);
     return () => window.clearTimeout(timer);
-  }, [source, slug]);
+  }, [source, slug, editable]);
 
   // Only re-run the (async) auto-layout when the structure changes — not on note edits.
   const structKey = useMemo(
@@ -207,28 +214,35 @@ function Canvas({ slug, file, initialSource }: Props) {
         <div className="absolute bottom-[-15%] left-[10%] h-[420px] w-[520px] rounded-full bg-[#7FB5AE]/25 blur-[100px]" />
       </div>
 
-      <header className="relative flex h-12 shrink-0 items-center gap-3 border-b border-white/60 bg-white/55 px-4 backdrop-blur-xl backdrop-saturate-150">
-        <Link href="/" className="font-mono text-[14px] font-semibold tracking-tight hover:text-muted">
-          archoom
-        </Link>
-        <span className="font-mono text-[12px] text-muted">/ {file}</span>
-        <div className="ml-auto flex items-center gap-2">
-          <span
-            className={`font-mono text-[11px] ${saveState === 'error' ? 'text-[#9A4A42]' : 'text-muted'}`}
-          >
-            {saveState === 'saved' && '✓ saved'}
-            {saveState === 'saving' && 'saving…'}
-            {saveState === 'error' && 'write failed — read-only?'}
-          </span>
-          <button onClick={() => setShowCode((v) => !v)} className={`flex items-center gap-1.5 ${glassButton}`}>
-            {showCode ? <PanelLeftClose size={13} /> : <PanelLeftOpen size={13} />}
-            {showCode ? 'Hide code' : 'Show code'}
-          </button>
-        </div>
-      </header>
+      {!embed && (
+        <header className="relative flex h-12 shrink-0 items-center gap-3 border-b border-white/60 bg-white/55 px-4 backdrop-blur-xl backdrop-saturate-150">
+          <Link href="/" className="font-mono text-[14px] font-semibold tracking-tight hover:text-muted">
+            archoom
+          </Link>
+          <span className="font-mono text-[12px] text-muted">/ {file}</span>
+          <div className="ml-auto flex items-center gap-2">
+            {editable && (
+              <span
+                className={`font-mono text-[11px] ${saveState === 'error' ? 'text-[#9A4A42]' : 'text-muted'}`}
+              >
+                {saveState === 'saved' && '✓ saved'}
+                {saveState === 'saving' && 'saving…'}
+                {saveState === 'error' && 'write failed — read-only?'}
+              </span>
+            )}
+            {editable && (
+              <button onClick={() => setShowCode((v) => !v)} className={`flex items-center gap-1.5 ${glassButton}`}>
+                {showCode ? <PanelLeftClose size={13} /> : <PanelLeftOpen size={13} />}
+                {showCode ? 'Hide code' : 'Show code'}
+              </button>
+            )}
+            {sharePath && <ShareMenu path={sharePath} />}
+          </div>
+        </header>
+      )}
 
       <div className="relative flex min-h-0 flex-1">
-        {showCode && (
+        {editable && showCode && (
           <div className="flex w-[400px] shrink-0 flex-col border-r border-white/60 bg-white/75 backdrop-blur-xl backdrop-saturate-150">
             <div className="min-h-0 flex-1 overflow-hidden">
               <Editor value={source} onChange={setSource} />
@@ -269,15 +283,25 @@ function Canvas({ slug, file, initialSource }: Props) {
               {doc.title}
             </div>
           )}
-          {selected && (
+          {selected && (editable || doc.notes.has(selected.id)) && (
             <NotePanelHost
               node={selected}
               nodeId={selected.id}
               note={doc.notes.get(selected.id) ?? ''}
+              editable={editable}
               canvasRef={canvasRef}
               onChange={(text) => setSource((s) => upsertNote(s, selected.id, text))}
               onClose={closePanel}
             />
+          )}
+          {embed && (
+            <Link
+              href="/"
+              target="_blank"
+              className="pointer-events-auto absolute bottom-3 left-3 rounded-full border border-white/60 bg-white/55 px-3 py-1.5 font-mono text-[11px] tracking-tight text-muted shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-md transition-colors hover:text-ink"
+            >
+              archoom
+            </Link>
           )}
         </div>
       </div>
@@ -292,6 +316,7 @@ function NotePanelHost({
   node,
   nodeId,
   note,
+  editable,
   canvasRef,
   onChange,
   onClose,
@@ -299,6 +324,7 @@ function NotePanelHost({
   node: NodeDef;
   nodeId: string;
   note: string;
+  editable: boolean;
   canvasRef: RefObject<HTMLDivElement | null>;
   onChange: (text: string) => void;
   onClose: () => void;
@@ -328,7 +354,14 @@ function NotePanelHost({
 
   if (!position) return null;
   return (
-    <NotePanel node={node} note={note} position={position} onChange={onChange} onClose={onClose} />
+    <NotePanel
+      node={node}
+      note={note}
+      position={position}
+      editable={editable}
+      onChange={onChange}
+      onClose={onClose}
+    />
   );
 }
 
