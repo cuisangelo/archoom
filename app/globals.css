@@ -49,3 +49,14 @@ body {
 .react-flow__edge {
   pointer-events: none;
 }
+
+/* Smooth focus dimming when a node is hovered or selected. */
+.react-flow__node {
+  transition: opacity 160ms ease;
+}
+.react-flow__edge-path {
+  transition:
+    opacity 160ms ease,
+    stroke 160ms ease,
+    stroke-width 160ms ease;
+}

@@ -44,6 +44,7 @@ function Canvas({ slug, file, initialSource }: Props) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('saved');
   const canvasRef = useRef<HTMLDivElement>(null);
   const reactFlow = useReactFlow();
@@ -94,7 +95,7 @@ function Canvas({ slug, file, initialSource }: Props) {
         const notes = docRef.current.notes;
         setNodes(result.nodes.map((n) => ({ ...n, data: { ...n.data, hasNote: notes.has(n.id) } })));
         setEdges(result.edges);
-        window.setTimeout(() => void reactFlow.fitView({ padding: 0.12, duration: 500 }), 50);
+        window.setTimeout(() => void reactFlow.fitView({ padding: 0.16, duration: 500 }), 50);
       });
     }, 200);
     return () => {
@@ -105,7 +106,7 @@ function Canvas({ slug, file, initialSource }: Props) {
 
   // Re-fit when the editor pane is toggled and the canvas changes size.
   useEffect(() => {
-    const timer = window.setTimeout(() => void reactFlow.fitView({ padding: 0.12, duration: 300 }), 50);
+    const timer = window.setTimeout(() => void reactFlow.fitView({ padding: 0.16, duration: 300 }), 50);
     return () => window.clearTimeout(timer);
   }, [showCode, reactFlow]);
 
@@ -131,8 +132,65 @@ function Canvas({ slug, file, initialSource }: Props) {
     setSelectedId(null);
     setNodes((ns) => ns.map((n) => (n.selected ? { ...n, selected: false } : n)));
   }, []);
+  const onNodeMouseEnter = useCallback((_: unknown, node: Node) => setHoveredId(node.id), []);
+  const onNodeMouseLeave = useCallback(() => setHoveredId(null), []);
 
   const selected = selectedId ? doc.nodes.get(selectedId) : undefined;
+
+  // Focus mode: hovering or selecting a node spotlights its neighbourhood and dims the rest —
+  // the single biggest readability win on dense diagrams. Derived from the laid-out arrays so
+  // it never triggers a re-layout.
+  const focusId = hoveredId ?? selectedId;
+  const focus = useMemo(() => {
+    if (!focusId) return null;
+    const related = new Set<string>([focusId]);
+    const hlEdges = new Set<string>();
+    for (const e of edges) {
+      if (e.source === focusId) {
+        related.add(e.target);
+        hlEdges.add(e.id);
+      }
+      if (e.target === focusId) {
+        related.add(e.source);
+        hlEdges.add(e.id);
+      }
+    }
+    const node = doc.nodes.get(focusId);
+    if (node?.isGroup) {
+      const stack = [...node.children];
+      while (stack.length) {
+        const c = stack.pop()!;
+        related.add(c);
+        const cn = doc.nodes.get(c);
+        if (cn?.children.length) stack.push(...cn.children);
+      }
+    }
+    for (let p = node?.parent; p; p = doc.nodes.get(p)?.parent) related.add(p);
+    return { related, hlEdges };
+  }, [focusId, edges, doc]);
+
+  const displayNodes = useMemo(() => {
+    if (!focus) return nodes;
+    return nodes.map((n) =>
+      focus.related.has(n.id)
+        ? n
+        : { ...n, style: { ...n.style, opacity: n.type === 'archGroup' ? 0.4 : 0.16 } },
+    );
+  }, [nodes, focus]);
+
+  const displayEdges = useMemo(() => {
+    if (!focus) return edges;
+    return edges.map((e) =>
+      focus.hlEdges.has(e.id)
+        ? { ...e, style: { ...e.style, stroke: '#2B2F3A', strokeWidth: 2, strokeOpacity: 1 } }
+        : {
+            ...e,
+            style: { ...e.style, strokeOpacity: 0.05 },
+            labelStyle: { ...(e.labelStyle as Record<string, unknown>), opacity: 0.1 },
+            labelBgStyle: { fill: '#F6F7F8', fillOpacity: 0.05 },
+          },
+    );
+  }, [edges, focus]);
 
   // Place the note panel right next to the selected node, following pan/zoom/drag.
   const panelPos = useMemo(() => {
@@ -210,11 +268,13 @@ function Canvas({ slug, file, initialSource }: Props) {
 
         <div ref={canvasRef} className="relative min-w-0 flex-1">
           <ReactFlow
-            nodes={nodes}
-            edges={edges}
+            nodes={displayNodes}
+            edges={displayEdges}
             nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}
             onSelectionChange={onSelectionChange}
+            onNodeMouseEnter={onNodeMouseEnter}
+            onNodeMouseLeave={onNodeMouseLeave}
             nodesConnectable={false}
             deleteKeyCode={null}
             minZoom={0.15}
