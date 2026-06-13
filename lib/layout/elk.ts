@@ -1,16 +1,17 @@
 import ELK, { type ElkNode } from 'elkjs/lib/elk.bundled.js';
 import { MarkerType, type Edge, type Node } from '@xyflow/react';
 import type { Doc, NodeDef } from '../dsl/types';
+import { computeJumps, type Pt } from './edge-path';
 
 const elk = new ELK();
 
-const NODE_HEIGHT = 56;
+const NODE_HEIGHT = 60;
 const EDGE_COLOR = '#A3AAB8';
 
 const DIR = { right: 'RIGHT', left: 'LEFT', down: 'DOWN', up: 'UP' } as const;
 
 function nodeWidth(n: NodeDef): number {
-  return Math.round(Math.min(300, Math.max(130, 16 + 30 + 11 + n.label.length * 7.4 + 16)));
+  return Math.round(Math.min(340, Math.max(150, 68 + n.label.length * 8.2)));
 }
 
 export interface LayoutResult {
@@ -56,6 +57,7 @@ export async function layoutDoc(doc: Doc): Promise<LayoutResult> {
     layoutOptions: {
       'elk.algorithm': 'layered',
       'elk.direction': DIR[doc.direction],
+      'elk.edgeRouting': 'ORTHOGONAL',
       'elk.layered.spacing.nodeNodeBetweenLayers': '100',
       'elk.spacing.nodeNode': '54',
       'elk.spacing.edgeNode': '24',
@@ -119,7 +121,39 @@ export async function layoutDoc(doc: Doc): Promise<LayoutResult> {
   };
   walk(laidOut, { x: 0, y: 0 }, undefined);
 
+  // ELK routes the edges orthogonally; follow its bend points rather than letting React Flow
+  // auto-route between handles — that overlaps lines badly on dense graphs. Edge section
+  // coordinates are relative to the container the edge lives in, so accumulate that offset.
+  // elkjs' bundled types don't surface `sections` under TS 6, but the layout result carries them.
+  type RoutedEdge = { id: string; sections?: { startPoint: Pt; endPoint: Pt; bendPoints?: Pt[] }[] };
+  const sections = new Map<string, Pt[]>();
+  const collectEdges = (node: ElkNode, off: Pt) => {
+    for (const ee of (node.edges ?? []) as RoutedEdge[]) {
+      const sec = ee.sections?.[0];
+      if (!sec) continue;
+      sections.set(
+        ee.id,
+        [sec.startPoint, ...(sec.bendPoints ?? []), sec.endPoint].map((p) => ({
+          x: p.x + off.x,
+          y: p.y + off.y,
+        })),
+      );
+    }
+    for (const child of node.children ?? [])
+      collectEdges(child, { x: off.x + (child.x ?? 0), y: off.y + (child.y ?? 0) });
+  };
+  collectEdges(laidOut, { x: 0, y: 0 });
+
+  const pointsById = new Map<string, Pt[]>();
+  for (const e of validEdges) {
+    const pts = sections.get(e.id);
+    pointsById.set(e.id, pts && pts.length >= 2 ? pts : [centers.get(e.source)!, centers.get(e.target)!]);
+  }
+  const jumpsById = computeJumps([...pointsById].map(([id, points]) => ({ id, points })));
+
   const rfEdges: Edge[] = validEdges.map((e) => {
+    // We draw the path from ELK's route, but React Flow still needs a resolvable handle on each
+    // end or it drops the edge entirely — pick the side facing the other node.
     const s = centers.get(e.source)!;
     const t = centers.get(e.target)!;
     const horizontal = Math.abs(t.x - s.x) >= Math.abs(t.y - s.y);
@@ -141,8 +175,8 @@ export async function layoutDoc(doc: Doc): Promise<LayoutResult> {
       target: e.target,
       sourceHandle,
       targetHandle,
-      type: 'smoothstep',
-      pathOptions: { borderRadius: 14 },
+      type: 'orth',
+      data: { points: pointsById.get(e.id)!, jumps: jumpsById.get(e.id) ?? [] },
       label: e.label,
       style: {
         stroke: EDGE_COLOR,
@@ -152,7 +186,7 @@ export async function layoutDoc(doc: Doc): Promise<LayoutResult> {
       },
       ...(arrowEnd ? { markerEnd: marker } : {}),
       ...(e.kind === 'bidirectional' ? { markerStart: marker } : {}),
-      labelStyle: { fontFamily: 'var(--font-mono)', fontSize: 10.5, fill: '#6B7280' },
+      labelStyle: { fontFamily: 'var(--font-mono)', fontSize: 11, fill: '#6B7280' },
       labelBgStyle: { fill: '#F6F7F8', fillOpacity: 0.95 },
       labelBgPadding: [6, 3] as [number, number],
       labelBgBorderRadius: 6,

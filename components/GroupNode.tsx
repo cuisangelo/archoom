@@ -20,8 +20,8 @@ export default function GroupNode({ data, selected }: NodeProps) {
         className="flex items-center gap-1.5 px-4 pt-3.5"
         style={{ color: d.color ? tint.fg : '#6B7280' }}
       >
-        {d.icon && <NodeIcon name={d.icon} size={13} strokeWidth={1.9} />}
-        <span className="font-mono text-[11px] font-medium uppercase tracking-[0.08em]">{d.label}</span>
+        {d.icon && <NodeIcon name={d.icon} size={15} strokeWidth={1.9} />}
+        <span className="font-mono text-[12px] font-medium uppercase tracking-[0.08em]">{d.label}</span>
         {d.hasNote && <span className="ml-1 h-2 w-2 rounded-full bg-current opacity-70" />}
       </div>
       <NodeHandles />

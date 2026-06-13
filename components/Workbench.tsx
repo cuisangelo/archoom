@@ -20,6 +20,7 @@ import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import Editor from './Editor';
 import ArchNode from './ArchNode';
 import GroupNode from './GroupNode';
+import OrthEdge from './OrthEdge';
 import NotePanel from './NotePanel';
 import ShareMenu from './ShareMenu';
 import { parse } from '@/lib/dsl/parser';
@@ -28,6 +29,7 @@ import { layoutDoc } from '@/lib/layout/elk';
 import type { NodeDef } from '@/lib/dsl/types';
 
 const nodeTypes = { archNode: ArchNode, archGroup: GroupNode };
+const edgeTypes = { orth: OrthEdge };
 
 const PANEL_WIDTH = 320;
 const PANEL_GAP = 14;
@@ -271,6 +273,7 @@ function Canvas({ slug, file, initialSource, editable, canSave = false, embed = 
             nodes={displayNodes}
             edges={displayEdges}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
             onSelectionChange={onSelectionChange}
             onNodeMouseEnter={onNodeMouseEnter}

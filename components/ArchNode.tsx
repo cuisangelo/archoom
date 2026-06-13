@@ -16,15 +16,15 @@ export default function ArchNode({ data, selected }: NodeProps) {
       }`}
     >
       <span
-        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px]"
+        className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px]"
         style={{
           backgroundColor: isCloud ? 'rgba(255,255,255,0.85)' : tint.chipBg,
           color: tint.fg,
         }}
       >
-        <NodeIcon name={d.icon} hint={d.label} size={16} />
+        <NodeIcon name={d.icon} hint={d.label} size={20} />
       </span>
-      <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-ink">
+      <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[15px] font-medium text-ink">
         {d.label}
       </span>
       {d.hasNote && (
