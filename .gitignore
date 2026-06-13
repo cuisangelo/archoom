@@ -4,3 +4,6 @@ dist/
 .icons-cache/
 *.local
 .DS_Store
+
+# Internal-only diagrams — kept locally, never pushed to the public repo.
+diagrams/*-internal.md
