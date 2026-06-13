@@ -15,7 +15,8 @@ export default async function DiagramPage({ params }: { params: Promise<{ slug: 
       slug={diagram.slug}
       file={diagram.file}
       initialSource={diagram.source}
-      editable={editEnabled()}
+      editable
+      canSave={editEnabled()}
       sharePath={sharePath(diagram.slug)}
     />
   );

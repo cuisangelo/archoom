@@ -38,15 +38,17 @@ interface Props {
   slug: string;
   file: string;
   initialSource: string;
-  /** Show the code editor, note editing and autosave. Off on read-only/embedded views. */
+  /** Show the code editor and allow live source/note edits. Off on the read-only viewer. */
   editable: boolean;
+  /** Persist edits back to the file (autosave). Only where the filesystem is writable (local). */
+  canSave?: boolean;
   /** Chromeless layout for embedding the viewer in an iframe. */
   embed?: boolean;
   /** View-only link surfaced in the header's Share menu. */
   sharePath?: string;
 }
 
-function Canvas({ slug, file, initialSource, editable, embed = false, sharePath }: Props) {
+function Canvas({ slug, file, initialSource, editable, canSave = false, embed = false, sharePath }: Props) {
   const [source, setSource] = useState(initialSource);
   const [showCode, setShowCode] = useState(editable);
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -61,10 +63,11 @@ function Canvas({ slug, file, initialSource, editable, embed = false, sharePath 
   const docRef = useRef(doc);
   docRef.current = doc;
 
-  // Persist edits back to the diagram file, debounced.
+  // Persist edits back to the diagram file, debounced. Only when saving is allowed — on the
+  // read-only deploy the editor still works live, it just never writes back.
   const lastSaved = useRef(initialSource);
   useEffect(() => {
-    if (!editable || source === lastSaved.current) return;
+    if (!canSave || source === lastSaved.current) return;
     setSaveState('saving');
     const timer = window.setTimeout(async () => {
       try {
@@ -81,7 +84,7 @@ function Canvas({ slug, file, initialSource, editable, embed = false, sharePath 
       }
     }, 600);
     return () => window.clearTimeout(timer);
-  }, [source, slug, editable]);
+  }, [source, slug, canSave]);
 
   // Only re-run the (async) auto-layout when the structure changes — not on note edits.
   const structKey = useMemo(
@@ -221,7 +224,7 @@ function Canvas({ slug, file, initialSource, editable, embed = false, sharePath 
           </Link>
           <span className="font-mono text-[12px] text-muted">/ {file}</span>
           <div className="ml-auto flex items-center gap-2">
-            {editable && (
+            {canSave ? (
               <span
                 className={`font-mono text-[11px] ${saveState === 'error' ? 'text-[#9A4A42]' : 'text-muted'}`}
               >
@@ -229,6 +232,8 @@ function Canvas({ slug, file, initialSource, editable, embed = false, sharePath 
                 {saveState === 'saving' && 'saving…'}
                 {saveState === 'error' && 'write failed — read-only?'}
               </span>
+            ) : (
+              editable && <span className="font-mono text-[11px] text-muted">live · edits aren’t saved</span>
             )}
             {editable && (
               <button onClick={() => setShowCode((v) => !v)} className={`flex items-center gap-1.5 ${glassButton}`}>
