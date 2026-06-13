@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -9,7 +9,7 @@ import {
   ReactFlowProvider,
   applyNodeChanges,
   useReactFlow,
-  useViewport,
+  useStore,
   type Edge,
   type Node,
   type NodeChange,
@@ -24,6 +24,7 @@ import NotePanel from './NotePanel';
 import { parse } from '@/lib/dsl/parser';
 import { upsertNote } from '@/lib/dsl/notes';
 import { layoutDoc } from '@/lib/layout/elk';
+import type { NodeDef } from '@/lib/dsl/types';
 
 const nodeTypes = { archNode: ArchNode, archGroup: GroupNode };
 
@@ -48,7 +49,6 @@ function Canvas({ slug, file, initialSource }: Props) {
   const [saveState, setSaveState] = useState<SaveState>('saved');
   const canvasRef = useRef<HTMLDivElement>(null);
   const reactFlow = useReactFlow();
-  const viewport = useViewport();
 
   const doc = useMemo(() => parse(source), [source]);
   const docRef = useRef(doc);
@@ -192,25 +192,6 @@ function Canvas({ slug, file, initialSource }: Props) {
     );
   }, [edges, focus]);
 
-  // Place the note panel right next to the selected node, following pan/zoom/drag.
-  const panelPos = useMemo(() => {
-    if (!selectedId) return null;
-    const internal = reactFlow.getInternalNode(selectedId);
-    if (!internal) return null;
-    const abs = internal.internals.positionAbsolute;
-    const w = internal.measured?.width ?? 160;
-    const { x: vx, y: vy, zoom } = viewport;
-    const rect = canvasRef.current?.getBoundingClientRect();
-    const cw = rect?.width ?? 1200;
-    const ch = rect?.height ?? 800;
-    let left = (abs.x + w) * zoom + vx + PANEL_GAP;
-    if (left + PANEL_WIDTH > cw - 12) left = abs.x * zoom + vx - PANEL_WIDTH - PANEL_GAP;
-    left = Math.max(12, Math.min(left, cw - PANEL_WIDTH - 12));
-    let top = abs.y * zoom + vy;
-    top = Math.max(12, Math.min(top, ch - 320));
-    return { left, top };
-  }, [selectedId, viewport, nodes, reactFlow]);
-
   const componentCount = useMemo(() => [...doc.nodes.values()].filter((n) => !n.isGroup).length, [doc]);
   const firstError = doc.errors[0];
 
@@ -288,11 +269,12 @@ function Canvas({ slug, file, initialSource }: Props) {
               {doc.title}
             </div>
           )}
-          {selected && panelPos && (
-            <NotePanel
+          {selected && (
+            <NotePanelHost
               node={selected}
+              nodeId={selected.id}
               note={doc.notes.get(selected.id) ?? ''}
-              position={panelPos}
+              canvasRef={canvasRef}
               onChange={(text) => setSource((s) => upsertNote(s, selected.id, text))}
               onClose={closePanel}
             />
@@ -300,6 +282,53 @@ function Canvas({ slug, file, initialSource }: Props) {
         </div>
       </div>
     </div>
+  );
+}
+
+// Isolated so that following the selected node through pan/zoom/drag re-renders only this small
+// subtree — not the whole Canvas. Subscribes to the React Flow store directly instead of lifting
+// the live viewport into Canvas, which would re-run every memo on every frame.
+function NotePanelHost({
+  node,
+  nodeId,
+  note,
+  canvasRef,
+  onChange,
+  onClose,
+}: {
+  node: NodeDef;
+  nodeId: string;
+  note: string;
+  canvasRef: RefObject<HTMLDivElement | null>;
+  onChange: (text: string) => void;
+  onClose: () => void;
+}) {
+  const position = useStore(
+    useCallback(
+      (s) => {
+        const internal = s.nodeLookup.get(nodeId);
+        if (!internal) return null;
+        const abs = internal.internals.positionAbsolute;
+        const w = internal.measured?.width ?? 160;
+        const [vx, vy, zoom] = s.transform;
+        const rect = canvasRef.current?.getBoundingClientRect();
+        const cw = rect?.width ?? 1200;
+        const ch = rect?.height ?? 800;
+        let left = (abs.x + w) * zoom + vx + PANEL_GAP;
+        if (left + PANEL_WIDTH > cw - 12) left = abs.x * zoom + vx - PANEL_WIDTH - PANEL_GAP;
+        left = Math.max(12, Math.min(left, cw - PANEL_WIDTH - 12));
+        let top = abs.y * zoom + vy;
+        top = Math.max(12, Math.min(top, ch - 320));
+        return { left, top };
+      },
+      [nodeId, canvasRef],
+    ),
+    (a, b) => a?.left === b?.left && a?.top === b?.top,
+  );
+
+  if (!position) return null;
+  return (
+    <NotePanel node={node} note={note} position={position} onChange={onChange} onClose={onClose} />
   );
 }
 

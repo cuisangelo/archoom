@@ -11,7 +11,7 @@ export default function ArchNode({ data, selected }: NodeProps) {
 
   return (
     <div
-      className={`relative flex h-full w-full items-center gap-2.5 rounded-2xl border bg-white/65 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_6px_16px_rgba(31,36,48,0.07)] backdrop-blur-md backdrop-saturate-150 transition-colors ${
+      className={`relative flex h-full w-full items-center gap-2.5 rounded-2xl border bg-white/90 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_6px_16px_rgba(31,36,48,0.07)] transition-colors ${
         selected ? 'border-primary/70 ring-2 ring-primary/15' : 'border-white/70 ring-1 ring-ink/5'
       }`}
     >

@@ -8,14 +8,14 @@ export interface Tint {
 const DEFAULT: Tint = {
   fg: '#2B2F3A',
   chipBg: '#EEF0F3',
-  groupBg: 'rgba(255,255,255,0.55)',
+  groupBg: 'rgba(255,255,255,0.9)',
   groupBorder: '#E3E5EA',
 };
 
 const mk = (fg: string, chipBg: string): Tint => ({
   fg,
   chipBg,
-  groupBg: `${chipBg}99`,
+  groupBg: `${chipBg}EB`,
   groupBorder: `${fg}2E`,
 });
 
@@ -38,7 +38,7 @@ export function resolveColor(color?: string): Tint {
   const key = color.trim().toLowerCase();
   if (PALETTE[key]) return PALETTE[key];
   if (/^#[0-9a-f]{6}$/.test(key)) {
-    return { fg: key, chipBg: `${key}1F`, groupBg: `${key}12`, groupBorder: `${key}3D` };
+    return { fg: key, chipBg: `${key}1F`, groupBg: `${key}26`, groupBorder: `${key}3D` };
   }
   return DEFAULT;
 }

@@ -13,8 +13,6 @@ export default function GroupNode({ data, selected }: NodeProps) {
       style={{
         backgroundColor: tint.groupBg,
         borderColor: selected ? '#2B2F3A' : tint.groupBorder,
-        backdropFilter: 'blur(6px) saturate(150%)',
-        WebkitBackdropFilter: 'blur(6px) saturate(150%)',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)',
       }}
     >
